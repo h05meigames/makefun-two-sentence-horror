@@ -16,6 +16,20 @@ const length = [...story].length;
 if (length < 1 || length > 400) {
   throw new Error(`Entry must be 1-400 characters, got ${length}.`);
 }
+if (!story.trim()) {
+  throw new Error("Entry must not be whitespace only.");
+}
+// Guard: the bounty requires EXACTLY two sentences. A length check
+// alone would let a three-sentence (or one-sentence) story slip
+// through, so count sentence terminators the way the gate does:
+// a sentence ends at . ! or ? followed by whitespace or end of text.
+const sentences = story
+  .trim()
+  .split(/(?<=[.!?])\s+/)
+  .filter((s) => s.length > 0);
+if (sentences.length !== 2) {
+  throw new Error(`Entry must be exactly 2 sentences, got ${sentences.length}.`);
+}
 
 mkdirSync("/output", { recursive: true });
 writeFileSync("/output/entry.txt", story, "utf8");
