@@ -1,36 +1,70 @@
-// make.fun bounty: u-suroto-two-sentence-horror-acea9253
-// "Two-Sentence Horror" — writes one original horror story of exactly
-// two sentences, at most 400 characters. The first sentence sets a
-// domestic unease; the second sentence turns it — the intruder was
-// never outside, it has been inside the bed all along.
-// Node 24, standard library only.
-import { mkdirSync, writeFileSync } from "node:fs";
+// Two-Sentence Horror — make.fun entry (u-suroto-two-sentence-horror-acea9253)
+// Writes exactly one original two-sentence horror story to
+// $MAKEFUN_OUTPUT_DIR/entry.txt (default /output/entry.txt) and validates it
+// hard before exiting: exactly 2 sentences, 1-400 characters, not blank.
+// Node 22.18+ runs this TypeScript file as-is; only the Node standard library.
 
-const story =
-  "I finally changed the locks after finding my own footprints in the hallway dust every morning, always leading from the front door to my bedroom. Tonight the footprints stopped at the bed — and something under the blanket breathed in time with mine.";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
-// Guard: the gate requires /output/entry.txt to be 1–400 characters.
-// Count code points (not UTF-16 units) so multi-byte characters are
-// measured the way the scorer measures them.
-const length = [...story].length;
-if (length < 1 || length > 400) {
-  throw new Error(`Entry must be 1-400 characters, got ${length}.`);
-}
-if (!story.trim()) {
-  throw new Error("Entry must not be whitespace only.");
-}
-// Guard: the bounty requires EXACTLY two sentences. A length check
-// alone would let a three-sentence (or one-sentence) story slip
-// through, so count sentence terminators the way the gate does:
-// a sentence ends at . ! or ? followed by whitespace or end of text.
-const sentences = story
-  .trim()
-  .split(/(?<=[.!?])\s+/)
-  .filter((s) => s.length > 0);
-if (sentences.length !== 2) {
-  throw new Error(`Entry must be exactly 2 sentences, got ${sentences.length}.`);
+const STORY =
+  "The baby monitor showed my daughter asleep in her crib, exactly where I had tucked her in an hour ago. " +
+  "Then I realized the hand gently stroking her hair belonged to someone standing inside the crib with her.";
+
+const MAX_CHARS = 400;
+
+/** Counts sentences by their terminal punctuation (. ! ?), one group per sentence. */
+function countSentences(text: string): number {
+  const ends = text.match(/[.!?]+(?=\s|$)/g);
+  return ends === null ? 0 : ends.length;
 }
 
-mkdirSync("/output", { recursive: true });
-writeFileSync("/output/entry.txt", story, "utf8");
-console.log("Wrote /output/entry.txt");
+/** Returns every gate problem found, or an empty list when the story is valid. */
+function validate(text: string): string[] {
+  const problems: string[] = [];
+  if (text.trim().length === 0) {
+    problems.push("story is empty or whitespace only");
+  }
+  if (text.length < 1 || text.length > MAX_CHARS) {
+    problems.push(`story is ${text.length} characters, must be 1-${MAX_CHARS}`);
+  }
+  const sentences = countSentences(text);
+  if (sentences !== 2) {
+    problems.push(`story has ${sentences} sentences, must be exactly 2`);
+  }
+  if (!/[.!?]$/.test(text.trim())) {
+    problems.push("story does not end with sentence-ending punctuation");
+  }
+  if (/[\r\n]/.test(text)) {
+    problems.push("story must be a single line (no line breaks)");
+  }
+  return problems;
+}
+
+function main(): void {
+  const problems = validate(STORY);
+  if (problems.length > 0) {
+    for (const problem of problems) console.error(`ERROR: ${problem}`);
+    process.exit(1);
+  }
+
+  const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+  mkdirSync(outDir, { recursive: true });
+  const outFile = join(outDir, "entry.txt");
+  writeFileSync(outFile, STORY, "utf8");
+
+  // Read back and fail hard if the file differs from the story by even one byte.
+  const back = readFileSync(outFile, "utf8");
+  if (back !== STORY) {
+    console.error("ERROR: entry.txt read back differently from the story");
+    process.exit(1);
+  }
+
+  console.log(STORY);
+  console.log(`characters: ${STORY.length}`);
+  console.log(`words: ${STORY.split(/\s+/).length}`);
+  console.log(`sentences: ${countSentences(STORY)}`);
+  console.log(`wrote: ${outFile}`);
+}
+
+main();
