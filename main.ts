@@ -8,8 +8,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const STORY =
-  "The baby monitor showed my daughter asleep in her crib, exactly where I had tucked her in an hour ago. " +
-  "Then I realized the hand gently stroking her hair belonged to someone standing inside the crib with her.";
+  "My smart speaker answered a question I hadn't asked yet, in my own voice, from the empty bedroom upstairs. " +
+  "I unplugged it, but it kept talking — because the voice was never coming from the speaker at all.";
 
 const MAX_CHARS = 400;
 
